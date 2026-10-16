@@ -1,0 +1,169 @@
+合流 AI · 使用文档（逐步骤版）
+================================
+最后更新：2026-10-11
+
+本文件说明从零开始把「合流 AI」跑起来的每一个步骤，包含排错方法。
+全部操作都在 Windows 上完成，不需要联网。
+
+
+一、目录里都有什么
+--------------------------------
+D:\competition\
+  ├─ index.html              登录页（前端入口）
+  ├─ prototype-final.html    主系统页面
+  ├─ app.js / src/           前端代码
+  ├─ docs/                   架构、AI 技术、产品方案文档
+  └─ backend\
+      ├─ dist\               ← 【后端离线包，真正在用的就是这个】
+      │    ├─ app.jar         后端程序（63 MB）
+      │    ├─ jdk-17\         自带的 Java 17（291 MB）
+      │    ├─ data\           H2 数据库（首次启动自动生成）
+      │    ├─ run.cmd         Windows 启动脚本
+      │    ├─ run.sh          macOS/Linux 启动脚本
+      │    └─ README.txt
+      ├─ src\                后端 Java 源码
+      ├─ pom.xml              Maven 构建文件
+      └─ target\             构建产物（已忽略）
+
+
+二、重复文件清理结果（已完成）
+--------------------------------
+之前扫描发现的问题已全部处理完毕：
+
+1. 【已删除】Java17\ 目录（352 MB，与 backend\dist\ 完全重复）
+2. 【已删除】archive\heliu-ai-backend-standalone.jar.broken（63 MB 坏包）
+3. 【已清理】backend\dist\data\ 残留锁文件与演示数据
+4. 【已修复】run.cmd 编码改为 ASCII + CRLF，控制台不再乱码
+
+现在 backend\dist\ 只保留 app.jar、jdk-17\、run.cmd、run.sh、README.txt，
+首次启动会重新生成 data\ 目录与干净演示数据。
+
+注：根目录、backend、deepseek-api 三处的 README.md 和 application.yml 内容各不相同，
+属于正常现象，不要删。
+
+
+三、启动后端（每一步都写清楚）
+--------------------------------
+前置条件：无。后端自带 Java 17，不需要你电脑装过 Java，也不需要联网。
+
+第 1 步：打开 backend\dist 目录
+    资源管理器进入 D:\competition\backend\dist\
+
+第 2 步：双击 run.cmd
+    会弹出一个黑色控制台窗口，开始滚动启动日志。
+    第一次启动大约要 20~40 秒，请耐心等。
+
+第 3 步：确认启动成功
+    看到类似这行就是成功了：
+        Started HeliuAiApplication in xx seconds
+    然后打开浏览器访问：
+        http://localhost:8080/swagger-ui.html
+    能看到接口文档页面，说明后端完全正常。
+
+第 4 步：启动前端
+    资源管理器回到 D:\competition\，双击 index.html
+    登录后进入主系统。
+
+第 5 步（可选）：让前端连后端
+    直接打开 index.html 是离线演示模式（用内置假数据）。
+    想用真实后端数据，在 index.html 后面加参数：
+        D:\competition\index.html?api=http://localhost:8080/api/v1
+    或者在浏览器地址栏打开：
+        file:///D:/competition/index.html?api=http://localhost:8080/api/v1
+    顶栏显示「后端已连接 · 实时数据」就连上了。
+    后端没开时会自动回退到演示数据，不会白屏。
+
+第 6 步：关闭后端
+    直接关掉那个黑色控制台窗口即可。
+
+
+四、启动失败怎么排查（按顺序试）
+--------------------------------
+【问题 1】双击 run.cmd 一闪就关了
+    原因：启动报错，窗口立刻退出。
+    排查：按 Win+R 输入 cmd 回车，然后执行
+        D:
+        cd \competition\backend\dist
+        run.cmd
+    这样窗口不会关，能看到完整报错。
+
+【问题 2】报 "Unable to determine Dialect" 或数据库连不上
+    原因：data 目录只读，或残留了锁文件。
+    排查：
+      1) 删掉 D:\competition\backend\dist\data\heliu.lock.db
+      2) 确认 data 目录可以写入（右键→属性，取消「只读」）
+      3) 重新双击 run.cmd，H2 会自动重建数据库
+
+【问题 3】端口 8080 被占用
+    原因：上一次的后端没退干净，或有别的程序占着 8080。
+    排查：以管理员身份打开 PowerShell，执行
+        Get-Process java -ErrorAction SilentlyContinue | Stop-Process -Force
+    然后重新启动。
+
+【问题 4】控制台里中文注释变成乱码、还提示「不是内部或外部命令」
+    原因：run.cmd 被 UTF-8 保存，但 Windows 控制台默认 GBK 编码。
+    排查：用记事本打开 run.cmd，另存为时选「ANSI」编码覆盖；
+          或者直接把中文 rem 那一行删掉。
+    修正后的 run.cmd 应该长这样：
+        @echo off
+        setlocal
+        set "DIR=%~dp0"
+        if exist "%DIR%jdk-17\bin\java.exe" (
+          set "JAVA_CMD=%DIR%jdk-17\bin\java.exe"
+        ) else (
+          set "JAVA_CMD=java"
+        )
+        "%JAVA_CMD%" -jar "%DIR%app.jar" %*
+        endlocal
+
+【问题 5】想重置演示数据
+    删掉整个 data 目录，下次启动自动重建并写入演示数据：
+        删除 D:\competition\backend\dist\data\
+    （注意：这会清空已有数据）
+
+
+五、常用地址
+--------------------------------
+后端健康检查：http://localhost:8080/actuator/health
+接口文档    ：http://localhost:8080/swagger-ui.html
+H2 数据库   ：http://localhost:8080/h2-console
+              （JDBC URL 填 jdbc:h2:file:./data/heliu，用户名 sa，密码空）
+
+
+六、切换到 DeepSeek 真实模型（可选）
+--------------------------------
+默认用的是 Demo 模型（不需要密钥）。想用 DeepSeek：
+
+第 1 步：以管理员身份打开 PowerShell
+第 2 步：执行
+    $env:HELIU_AI_PROVIDER='deepseek'
+    $env:DEEPSEEK_API_KEY='你的 API Key'
+第 3 步：在同一窗口里启动后端
+    D:
+    cd \competition\backend\dist
+    .\run.cmd
+没有 Key 时会自动回退到 Demo 模型。
+
+
+七、想改代码重新构建（可选）
+--------------------------------
+需要安装 Maven 并联网。后端目录执行：
+
+    cd D:\competition\backend
+    .\mvnw.cmd clean package
+
+构建产物在 target\ 里。构建完把新 jar 同步到离线包：
+
+    .\scripts\sync-dist.ps1
+
+注意：mvnw.cmd 首次运行会下载 Maven，需要联网；
+      当前电脑没装 Maven，这一步只在需要改代码时才做。
+
+
+八、清理说明（已完成）
+--------------------------------
+重复文件已在交付前清理完毕，无需再操作。
+
+如日后想重置演示数据，删除 backend\dist\data\ 目录即可（首次启动自动重建）：
+
+    Remove-Item -Recurse -Force "D:\competition\backend\dist\data"

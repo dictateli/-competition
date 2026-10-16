@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>合流 AI · 登录</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="box">
+    <h2>登录</h2>
+    <form id="login-form">
+      <div class="input-box">
+        <label for="account">账号</label>
+        <input id="account" name="account" type="text" autocomplete="username" required />
+      </div>
+      <div class="input-box">
+        <label for="password">密码</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required />
+      </div>
+      <div class="bth-box">
+        <a href="#" onclick="return false;">忘记密码</a>
+        <div>
+          <button type="submit">登录</button>
+          <button type="button">注册</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    // 直接打开时使用本地演示模式；带 ?api= 参数时调用后端登录接口。
+    var heliuParams = new URLSearchParams(window.location.search);
+    var heliuApiBase = heliuParams.get('api') || window.HELIU_API_BASE || '';
+    document.getElementById('login-form').addEventListener('submit', function (event) {
+      event.preventDefault();
+      var account = document.getElementById('account').value;
+      var target = 'prototype-final.html' + (heliuApiBase ? ('?api=' + encodeURIComponent(heliuApiBase)) : '');
+      if (!heliuApiBase || !window.fetch) {
+        window.location.href = target;
+        return;
+      }
+      fetch(heliuApiBase.replace(/\/+$/, '') + '/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: account, password: document.getElementById('password').value })
+      }).then(function (response) { return response.json(); }).then(function (payload) {
+        if (payload && payload.success && payload.data) {
+          try { sessionStorage.setItem('heliu_token', payload.data.token || ''); } catch (error) { }
+        }
+        window.location.href = target;
+      }).catch(function () {
+        window.location.href = target;
+      });
+    });
+  </script>
+</body>
+</html>

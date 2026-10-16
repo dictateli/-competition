@@ -1,0 +1,66 @@
+spring:
+  application:
+    name: heliu-ai-backend
+  profiles:
+    default: demo
+  datasource:
+    url: jdbc:h2:file:./data/heliu;MODE=MySQL;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=TRUE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 60MB
+  jackson:
+    default-property-inclusion: non_null
+    time-zone: Asia/Shanghai
+
+server:
+  port: 8080
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+logging:
+  level:
+    com.heliu.ai: INFO
+    org.hibernate.SQL: WARN
+
+# 演示 / 开发环境默认允许任意来源，生产环境在 application-prod.yml 中收紧
+heliu:
+  ai:
+    provider: ${HELIU_AI_PROVIDER:demo}
+    deepseek:
+      base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+      api-key: ${DEEPSEEK_API_KEY:}
+      model: ${DEEPSEEK_MODEL:deepseek-chat}
+  security:
+    allowed-origins: "*"
+
+
+

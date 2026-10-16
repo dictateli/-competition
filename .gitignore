@@ -1,0 +1,25 @@
+# --- 构建产物 ---
+backend/target/
+
+# --- 运行时（打包的 JDK / 数据库文件，不纳入版本控制）---
+backend/dist/jdk-17/
+backend/dist/data/
+backend/data/
+
+# --- IDE ---
+.idea/
+.vscode/
+*.iml
+
+# --- 系统文件 ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- 日志与临时文件 ---
+*.log
+*.tmp
+*.bak
+
+# --- Node ---
+node_modules/

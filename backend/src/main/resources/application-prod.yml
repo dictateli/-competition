@@ -1,0 +1,46 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/heliu_ai?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
+    username: ${DB_USERNAME:heliu}
+    password: ${DB_PASSWORD:heliu}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  h2:
+    console:
+      enabled: false
+  security:
+    user:
+      name: ${API_USERNAME:heliu-admin}
+      password: ${API_PASSWORD:change-me}
+
+server:
+  port: ${SERVER_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+
+# 生产环境关闭在线接口文档
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+heliu:
+  # 生产环境不写入演示数据
+  seed-demo-data: false
+  security:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:8080}
+
+logging:
+  level:
+    com.heliu.ai: INFO
