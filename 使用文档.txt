@@ -1,45 +1,55 @@
 合流 AI · 使用文档（逐步骤版）
 ================================
-最后更新：2026-10-11
+最后更新：2026-10-17
 
 本文件说明从零开始把「合流 AI」跑起来的每一个步骤，包含排错方法。
-全部操作都在 Windows 上完成，不需要联网。
+全部操作都在 Windows 上完成；后端不需要联网，前端构建需要联网装一次依赖。
 
 
 一、目录里都有什么
 --------------------------------
 D:\competition\
-  ├─ index.html              登录页（前端入口）
-  ├─ prototype-final.html    主系统页面
-  ├─ app.js / src/           前端代码
-  ├─ docs/                   架构、AI 技术、产品方案文档
-  └─ backend\
-      ├─ dist\               ← 【后端离线包，真正在用的就是这个】
-      │    ├─ app.jar         后端程序（63 MB）
-      │    ├─ jdk-17\         自带的 Java 17（291 MB）
-      │    ├─ data\           H2 数据库（首次启动自动生成）
-      │    ├─ run.cmd         Windows 启动脚本
-      │    ├─ run.sh          macOS/Linux 启动脚本
-      │    └─ README.txt
-      ├─ src\                后端 Java 源码
-      ├─ pom.xml              Maven 构建文件
-      └─ target\             构建产物（已忽略）
+  ├─ frontend\               ← 【前端】Vue 3 + Vite + TypeScript
+  │    ├─ src\                组件源码（.vue / .ts）
+  │    ├─ public\             全局样式
+  │    ├─ dist\               构建产物（可直接部署）
+  │    ├─ node_modules\       依赖（已装好，无需再装）
+  │    ├─ login.html          登录页入口
+  │    ├─ app.html            主系统入口
+  │    ├─ index.html          重定向到 login.html
+  │    ├─ package.json        npm run dev / build / preview
+  │    └─ vite.config.ts
+  ├─ backend\
+  │    ├─ dist\               ← 【后端离线包】双击 run.cmd 就能跑
+  │    │    ├─ app.jar        后端程序（约 104 MB，含 Tika 解析器）
+  │    │    ├─ jdk-17\        自带的 Java 17
+  │    │    ├─ data\          H2 数据库（自动生成）
+  │    │    ├─ run.cmd        Windows 启动脚本
+  │    │    └─ README.txt
+  │    ├─ src\                后端 Java 源码
+  │    └─ pom.xml             Maven 构建文件
+  ├─ docs\                    架构、AI 技术、产品方案文档
+  ├─ archive\                 旧版原型归档（不再维护，可忽略）
+  ├─ README.md                项目说明
+  └─ 使用文档.txt             本文件
+
+根目录的旧版 Vue 2 文件（index.html、app.js、vendor\ 等）已全部
+删除，被 frontend\ 取代，无需再手动清理。
 
 
-二、重复文件清理结果（已完成）
+二、登录账号
 --------------------------------
-之前扫描发现的问题已全部处理完毕：
+后端启动后会自动创建三个演示账号：
 
-1. 【已删除】Java17\ 目录（352 MB，与 backend\dist\ 完全重复）
-2. 【已删除】archive\heliu-ai-backend-standalone.jar.broken（63 MB 坏包）
-3. 【已清理】backend\dist\data\ 残留锁文件与演示数据
-4. 【已修复】run.cmd 编码改为 ASCII + CRLF，控制台不再乱码
+    账号      密码        角色
+    ----    --------    --------
+    linran  heliu123    产品负责人
+    zhao    heliu123    项目经理
+    demo    demo1234    成员
 
-现在 backend\dist\ 只保留 app.jar、jdk-17\、run.cmd、run.sh、README.txt，
-首次启动会重新生成 data\ 目录与干净演示数据。
-
-注：根目录、backend、deepseek-api 三处的 README.md 和 application.yml 内容各不相同，
-属于正常现象，不要删。
+登录是真实校验的：密码错返回 401，登录成功发 token，之后所有接口
+都要带这个 token，没带或过期一律 403 拒绝。
+token 怎么拿、程序怎么调用，见第四章。
 
 
 三、启动后端（每一步都写清楚）
@@ -50,120 +60,223 @@ D:\competition\
     资源管理器进入 D:\competition\backend\dist\
 
 第 2 步：双击 run.cmd
-    会弹出一个黑色控制台窗口，开始滚动启动日志。
-    第一次启动大约要 20~40 秒，请耐心等。
+    会弹出一个黑色控制台窗口。第一次启动约 20~60 秒，请耐心等。
 
 第 3 步：确认启动成功
-    看到类似这行就是成功了：
-        Started HeliuAiApplication in xx seconds
-    然后打开浏览器访问：
+    打开浏览器访问：
         http://localhost:8080/swagger-ui.html
     能看到接口文档页面，说明后端完全正常。
 
-第 4 步：启动前端
-    资源管理器回到 D:\competition\，双击 index.html
-    登录后进入主系统。
+第 4 步：启动前端（两种方式，任选其一）
 
-第 5 步（可选）：让前端连后端
-    直接打开 index.html 是离线演示模式（用内置假数据）。
-    想用真实后端数据，在 index.html 后面加参数：
-        D:\competition\index.html?api=http://localhost:8080/api/v1
-    或者在浏览器地址栏打开：
-        file:///D:/competition/index.html?api=http://localhost:8080/api/v1
+    方式 A · 开发模式（热更新，改代码用）
+        在 frontend\ 目录打开 PowerShell：
+            cd D:\competition\frontend
+            npm run dev
+        然后打开 http://localhost:5173/
+        开发服务器会自动把 /api 请求转发到 8080，登录后直接调试。
+
+    方式 B · 生产构建（给别人演示用）
+            cd D:\competition\frontend
+            npm run build
+        产物在 frontend\dist\ 里，把它发布到任意静态服务器即可。
+        本地快速预览：
+            npm run preview
+        然后打开 http://localhost:4173/
+
+第 5 步：让前端连后端
+    前端默认走同源后端；开发模式下 Vite 自动转发，无需配置。
+    构建后部署到别处时，通过地址栏传参：
+        http://你的地址/login.html?api=http://localhost:8080/api/v1
     顶栏显示「后端已连接 · 实时数据」就连上了。
-    后端没开时会自动回退到演示数据，不会白屏。
+    后端没开时自动回退到演示数据，不会白屏。
 
-第 6 步：关闭后端
-    直接关掉那个黑色控制台窗口即可。
+第 6 步：关闭
+    后端：关掉黑色控制台窗口。
+    前端 dev：在对应 PowerShell 里按 Ctrl+C。
 
 
-四、启动失败怎么排查（按顺序试）
+四、如何调用后端 API（程序、Postman、第三方系统接入）
+--------------------------------
+后端地址 http://localhost:8080，业务接口统一前缀 /api/v1。
+除「登录 / 注册」外全部接口都要 token，接入三步：登录拿 token →
+之后请求都带上 → 不用了就登出。
+
+第 1 步：登录拿 token（PowerShell 示例）
+
+    $resp = Invoke-RestMethod -Uri http://localhost:8080/api/v1/auth/login `
+        -Method Post -ContentType 'application/json' `
+        -Body '{"username":"linran","password":"heliu123"}'
+    $token = $resp.data.token
+    $token
+
+    成功返回（节选）：
+    {"success":true,"data":{"token":"tok-971b0f3e1c334f51...","user":{...},"permissions":[...]}}
+    失败返回：
+    {"success":false,"data":null,"message":"账号或密码错误"}
+
+    curl 用户的写法（PowerShell 里 curl 是别名，请写 curl.exe）：
+    curl.exe -X POST http://localhost:8080/api/v1/auth/login -H "Content-Type: application/json" -d "{\"username\":\"linran\",\"password\":\"heliu123\"}"
+
+第 2 步：之后每个请求都带上 Authorization 头
+
+    Invoke-RestMethod -Uri http://localhost:8080/api/v1/me `
+        -Headers @{ Authorization = "Bearer $token" }
+
+第 3 步：登出（token 立即失效）
+
+    Invoke-RestMethod -Uri http://localhost:8080/api/v1/auth/logout `
+        -Method Post -Headers @{ Authorization = "Bearer $token" }
+
+统一响应格式
+    成功 {"success":true,"traceId":"...","data":<结果>,"message":"ok","timestamp":"..."}
+    失败 {"success":false,"traceId":"...","data":null,"message":"<原因>","timestamp":"..."}
+    先看 success 字段：false 时 message 就是给人看的失败原因。
+
+token 注意事项
+    · 有效期 8 小时，过期后需重新登录（会返回 403）
+    · 存在后端内存里：后端重启后所有 token 失效，要重新登录
+    · 登出即刻失效
+    · token 本身不含用户信息，泄漏了别人就能用，请妥善保管
+
+常见状态码
+    200 成功      401 账号或密码错（登录接口）
+    403 没带 token / token 过期 / 权限不足
+    409 注册时账号被占用
+    500 服务器异常（看后端控制台日志）
+
+不用 token 也能调的接口
+    POST /api/v1/auth/login       登录
+    POST /api/v1/auth/register    注册
+    GET  /actuator/health         健康检查
+    GET  /swagger-ui.html         接口文档
+    GET  /h2-console              数据库控制台
+    /ws/**                        WebSocket（会议转写等）
+
+推荐先看 Swagger
+    浏览器打开 http://localhost:8080/swagger-ui.html，全部接口
+    都能在线查看并直接调试（右上角 Authorize 填 Bearer <token>），
+    不用手写命令。找不到接口时先来这里搜。
+
+常用接口速查（都需 token）
+    GET  /api/v1/me                      当前登录用户
+    GET  /api/v1/dashboard               AI 工作台
+    GET  /api/v1/workspaces              工作空间列表
+    GET  /api/v1/projects                项目列表
+    GET  /api/v1/meetings                会议列表
+    POST /api/v1/meetings                创建会议
+    POST /api/v1/documents               上传文档（multipart，≤ 50 MB）
+    GET  /api/v1/documents               文档列表
+    POST /api/v1/knowledge/ask           知识库 RAG 问答
+    GET  /api/v1/knowledge/search        知识检索
+    POST /api/v1/copilot/chat            Copilot 对话
+    POST /api/v1/ai/writing              AI 写作
+    POST /api/v1/workflows/from-prompt   自然语言生成工作流
+    GET  /api/v1/notifications           通知列表
+
+前端页面怎么连后端
+    开发模式 npm run dev：Vite 自动转发 /api 到 8080，零配置。
+    构建后部署到别处：
+        http://你的地址/login.html?api=http://后端地址:8080/api/v1
+    或在页面里设置 window.HELITU_API_BASE = 'http://localhost:8080/api/v1'
+    （登录成功后前端会把 token 存进浏览器 sessionStorage，
+     之后的请求自动加 Authorization: Bearer 头，无需手工处理）
+
+
+五、文档上传与 PDF 解析
+--------------------------------
+「文档分析」页面上传的文档现在会被 Apache Tika 真实解析：
+
+    支持：.pdf .doc .docx .xls .xlsx .ppt .pptx .txt .md .csv .json
+    上传上限：50 MB
+
+上传后自动提取全文 → 生成摘要与风险提示 → 写入知识库 → 可 RAG 问答。
+纯文本类（.txt/.md/.csv/.json）直接读原文；PDF/Office 由 Tika 抽取文本。
+
+注意：扫描件、纯图片 PDF 没有文字层，会提示「未能提取到文本内容」。
+
+
+六、启动失败怎么排查（按顺序试）
 --------------------------------
 【问题 1】双击 run.cmd 一闪就关了
-    原因：启动报错，窗口立刻退出。
-    排查：按 Win+R 输入 cmd 回车，然后执行
+    按 Win+R 输入 cmd 回车，执行：
         D:
         cd \competition\backend\dist
         run.cmd
-    这样窗口不会关，能看到完整报错。
+    窗口不会关，能看到完整报错。
 
 【问题 2】报 "Unable to determine Dialect" 或数据库连不上
-    原因：data 目录只读，或残留了锁文件。
-    排查：
-      1) 删掉 D:\competition\backend\dist\data\heliu.lock.db
-      2) 确认 data 目录可以写入（右键→属性，取消「只读」）
-      3) 重新双击 run.cmd，H2 会自动重建数据库
+    1) 删掉 D:\competition\backend\dist\data\heliu.lock.db
+    2) 确认 data 目录可写（右键→属性，取消「只读」）
+    3) 重新双击 run.cmd
 
 【问题 3】端口 8080 被占用
-    原因：上一次的后端没退干净，或有别的程序占着 8080。
-    排查：以管理员身份打开 PowerShell，执行
+    管理员 PowerShell 执行：
         Get-Process java -ErrorAction SilentlyContinue | Stop-Process -Force
-    然后重新启动。
+    再重新启动。
 
-【问题 4】控制台里中文注释变成乱码、还提示「不是内部或外部命令」
-    原因：run.cmd 被 UTF-8 保存，但 Windows 控制台默认 GBK 编码。
-    排查：用记事本打开 run.cmd，另存为时选「ANSI」编码覆盖；
-          或者直接把中文 rem 那一行删掉。
-    修正后的 run.cmd 应该长这样：
-        @echo off
-        setlocal
-        set "DIR=%~dp0"
-        if exist "%DIR%jdk-17\bin\java.exe" (
-          set "JAVA_CMD=%DIR%jdk-17\bin\java.exe"
-        ) else (
-          set "JAVA_CMD=java"
-        )
-        "%JAVA_CMD%" -jar "%DIR%app.jar" %*
-        endlocal
+【问题 4】登录提示「账号或密码错误」但账号没错
+    确认后端是新版（dist\app.jar 约 104 MB）。旧版不校验密码直接放行。
+    还不行就重置数据库：
+        Remove-Item -Recurse -Force "D:\competition\backend\dist\data"
+    重启后自动重建演示账号。
 
-【问题 5】想重置演示数据
-    删掉整个 data 目录，下次启动自动重建并写入演示数据：
-        删除 D:\competition\backend\dist\data\
-    （注意：这会清空已有数据）
+【问题 5】前端 npm run dev 报错
+    先确认 Node.js 版本 ≥ 18：
+        node --version
+    依赖损坏时重装：
+        cd D:\competition\frontend
+        Remove-Item -Recurse -Force node_modules
+        npm install
+
+【问题 6】调接口返回 403 但明明登录成功了
+    多数情况是 token 过期或后端重启过（token 存在内存里）。
+    重新登录拿新 token 即可。
 
 
-五、常用地址
+七、常用地址
 --------------------------------
 后端健康检查：http://localhost:8080/actuator/health
 接口文档    ：http://localhost:8080/swagger-ui.html
 H2 数据库   ：http://localhost:8080/h2-console
               （JDBC URL 填 jdbc:h2:file:./data/heliu，用户名 sa，密码空）
+前端开发    ：http://localhost:5173/
+构建预览    ：http://localhost:4173/
 
 
-六、切换到 DeepSeek 真实模型（可选）
+八、切换到 DeepSeek 真实模型（可选）
 --------------------------------
-默认用的是 Demo 模型（不需要密钥）。想用 DeepSeek：
+默认用 Demo 模型（不需要密钥）。想用 DeepSeek：
 
-第 1 步：以管理员身份打开 PowerShell
+第 1 步：管理员身份打开 PowerShell
 第 2 步：执行
     $env:HELIU_AI_PROVIDER='deepseek'
     $env:DEEPSEEK_API_KEY='你的 API Key'
-第 3 步：在同一窗口里启动后端
+第 3 步：同一窗口启动后端
     D:
     cd \competition\backend\dist
     .\run.cmd
-没有 Key 时会自动回退到 Demo 模型。
+没有 Key 时自动回退到 Demo 模型。
 
 
-七、想改代码重新构建（可选）
+九、想改代码重新构建（可选）
 --------------------------------
-需要安装 Maven 并联网。后端目录执行：
-
+【后端】需要 Maven 并联网：
     cd D:\competition\backend
-    .\mvnw.cmd clean package
-
-构建产物在 target\ 里。构建完把新 jar 同步到离线包：
-
+    .\mvnw.cmd clean package -DskipTests
     .\scripts\sync-dist.ps1
+mvnw.cmd 首次运行会下载 Maven；构建出的 jar 自动同步到 dist\app.jar。
 
-注意：mvnw.cmd 首次运行会下载 Maven，需要联网；
-      当前电脑没装 Maven，这一步只在需要改代码时才做。
+【前端】
+    cd D:\competition\frontend
+    npm run build
+产物在 frontend\dist\。改组件源码后重新 build 即可。
 
 
-八、清理说明（已完成）
+十、重置演示数据（含账号）
 --------------------------------
-重复文件已在交付前清理完毕，无需再操作。
-
-如日后想重置演示数据，删除 backend\dist\data\ 目录即可（首次启动自动重建）：
+删掉数据库目录后重启后端，自动重建演示账号和演示数据：
 
     Remove-Item -Recurse -Force "D:\competition\backend\dist\data"
+
+执行后所有登录中的 token 也会全部失效，需要重新登录。

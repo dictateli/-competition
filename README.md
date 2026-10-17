@@ -6,25 +6,32 @@
 
 ## 快速预览
 
-直接打开 `index.html` 进入登录页，登录后进入 `prototype-final.html`；也可在当前目录启动任意静态服务器：
+前端位于 `frontend/`（Vue 3 + Vite + TypeScript），需要本机安装 Node.js 16+：
 
 ```powershell
-npx serve .
+cd D:\competition\frontend
+npm install      # 首次需要联网安装依赖
+npm run dev      # 启动开发服务器：http://localhost:5173
 ```
 
-离线原型内置 Vue 2.7 Runtime，不依赖外部 CDN。生产方案建议采用 Vue 3 + Vite；现有页面、组件和数据流可直接迁移。
+打开 `http://localhost:5173` 进入登录页，使用内置账号登录后进入工作台（演示账号：`linran / heliu123`、`zhao / heliu123`、`demo / demo1234`）。构建生产包：
+
+```powershell
+npm run build    # 产物输出到 frontend/dist/（login.html / app.html 双入口）
+npm run preview  # 本地预览构建产物
+```
 
 会议工作台已接入 Jitsi Meet：点击“开始新会议”后直接在当前页面创建并进入官方 `meet.jit.si` 会议室，不需要跳转官网，也没有额外的登录或主持控制流程。回听使用浏览器语音合成按转写时间轴播放，并支持点击任意发言从该处继续回听。
 
 ## 连接后端（可选）
 
-原型默认离线运行，使用内置演示数据，直接打开即可演示。带上 `api` 参数后，界面会改为读取后端真实数据：工作台与项目任务、任务状态流转、"会议 → 行动 → 项目"闭环、文档上传与分析、知识检索与统计、自动化工作流的创建 / 启停 / 执行都会走后端接口；后端不可用时自动回退到内置演示数据。
+前端默认可离线演示，使用内置演示数据。开发服务器已配置代理，`/api` 与 `/ws` 请求会自动转发到 `http://localhost:8080` 后端；如需显式指定后端地址，可在页面运行时设置 `window.HELIU_API_BASE`：
 
 ```text
-index.html?api=http://localhost:8080/api/v1
+window.HELIU_API_BASE = 'http://localhost:8080/api/v1'
 ```
 
-连接成功后顶栏状态会显示"后端已连接 · 实时数据"；后端不可用时自动回退到离线演示数据，不会白屏。
+启用后，工作台与项目任务、任务状态流转、“会议 → 行动 → 项目”闭环、文档上传与分析、知识检索与统计、自动化工作流的创建 / 启停 / 执行都会走后端接口；后端不可用时自动回退到内置演示数据，不会白屏。
 
 ## 原型包含
 
@@ -42,7 +49,7 @@ index.html?api=http://localhost:8080/api/v1
 用户端（Web）
       |
       v
-前端应用层（Vue）
+前端应用层（Vue 3 + TypeScript）
       |
       v
 业务服务层（Java）
@@ -57,19 +64,17 @@ AI 能力服务层（大语言模型 / RAG / 语音识别）
 
 ```text
 .
-├─ index.html                  # 登录入口
-├─ prototype-final.html        # 主系统入口
-├─ style.css                   # 登录页样式
-├─ ha.jpg                      # 登录页背景
-├─ app.js                      # Vue 根应用与状态编排
-├─ styles.css                  # 完整视觉系统
-├─ runtime.css                 # 运行时补充样式
-├─ src/
-│  ├─ api.js                    # 后端 API 客户端（未配置时自动降级为演示数据）
-│  ├─ components/              # Copilot、图标、弹窗
-│  └─ views/                   # 七个业务工作台
-├─ vendor/vue.min.js           # 离线 Vue Runtime
-└─ docs/                       # 架构与产品方案
+├─ frontend/                  # Vue 3 + Vite + TypeScript 前端
+│  ├─ login.html              # 登录入口
+│  ├─ app.html                # 主应用入口（index.html 自动跳转到 login.html）
+│  ├─ public/                 # 全局样式（styles.css / runtime.css / style.css）
+│  ├─ src/                    # 组件、视图与 API 客户端（TypeScript）
+│  └─ vite.config.ts          # 构建与开发代理配置
+├─ backend/                   # Spring Boot 3 后端
+│  ├─ src/                    # 源码
+│  └─ dist/                   # 免安装运行包（app.jar + run.cmd）
+├─ archive/                   # 历史原型归档（不再维护）
+└─ docs/                      # 架构与产品方案
 ```
 
 ## 核心业务闭环

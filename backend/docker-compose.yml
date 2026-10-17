@@ -48,6 +48,11 @@ services:
       DB_USERNAME: heliu
       DB_PASSWORD: heliu
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      # AI 模型：默认离线 Demo；接入 DeepSeek 时通过 .env 或 shell 传入
+      HELIU_AI_PROVIDER: ${HELIU_AI_PROVIDER:-demo}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
     ports:
       - "8080:8080"
 

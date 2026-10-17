@@ -1,0 +1,23 @@
+/* Runtime polish and off-canvas safety */
+@media (max-width: 760px) {
+  .sidebar:not(.mobile-open) { pointer-events: none; }
+  .sidebar.mobile-open { pointer-events: auto; }
+}
+.loading-screen { padding: 40px; color: #536159; font-family: "PingFang SC", "Microsoft YaHei UI", sans-serif; }
+
+/* Sidebar collapse fix: keep icon-only mode clean and restore labels on mobile. */
+.sidebar-collapsed .nav-label-text {
+  display: none !important;
+}
+
+@media (max-width: 1260px) {
+  .nav-label-text {
+    display: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .sidebar .nav-label-text {
+    display: block !important;
+  }
+}

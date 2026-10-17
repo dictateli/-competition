@@ -5,6 +5,8 @@ backend/target/
 backend/dist/jdk-17/
 backend/dist/data/
 backend/data/
+# 离线 jar 超过 GitHub 100MB 限制，改由 Release 分发，不进仓库
+backend/dist/app.jar
 
 # --- IDE ---
 .idea/

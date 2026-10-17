@@ -1,27 +1,36 @@
 package com.heliu.ai.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.web.cors.CorsConfigurationSource;
 
-/**
- * 演示 / 开发环境（默认 profile = demo）：全部接口放开，便于评审直接演示与前端联调。
- * 注意：该配置仅用于比赛演示，不可用于生产。
- */
 @Configuration
 @Profile("!prod")
 public class DevSecurityConfig {
+
+    private final org.springframework.web.filter.OncePerRequestFilter tokenAuthenticationFilter;
+
+    @Autowired
+    public DevSecurityConfig(org.springframework.web.filter.OncePerRequestFilter tokenAuthenticationFilter) {
+        this.tokenAuthenticationFilter = tokenAuthenticationFilter;
+    }
+
     @Bean
     SecurityFilterChain devSecurityFilterChain(HttpSecurity http, CorsConfigurationSource corsConfigurationSource) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
+                .csrf(csrf -> csrf.disable())
+                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/api/**",
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/register",
                                 "/actuator/health",
                                 "/actuator/info",
                                 "/v3/api-docs/**",
@@ -31,7 +40,7 @@ public class DevSecurityConfig {
                                 "/ws/**"
                         ).permitAll()
                         .anyRequest().authenticated())
-                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
+                .addFilterBefore(tokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 }

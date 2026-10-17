@@ -18,6 +18,12 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import org.apache.tika.exception.TikaException;
+import org.apache.tika.metadata.Metadata;
+import org.apache.tika.parser.AutoDetectParser;
+import org.apache.tika.parser.ParseContext;
+import org.apache.tika.sax.BodyContentHandler;
+import org.xml.sax.SAXException;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -187,9 +193,21 @@ public class DocumentService {
             if (lower.endsWith(".txt") || lower.endsWith(".md") || lower.endsWith(".csv") || lower.endsWith(".json")) {
                 return new String(file.getBytes(), StandardCharsets.UTF_8);
             }
-            return "文档 " + name + " 已完成元数据解析。演示环境未安装 PDF/Office 解析器，生产环境应接入 Apache Tika、PDFBox 或专用文档服务。";
+            // 二进制文档（PDF/Word/Excel/PPT 等）交给 Apache Tika 真实解析。
+            BodyContentHandler handler = new BodyContentHandler(-1);
+            Metadata metadata = new Metadata();
+            AutoDetectParser parser = new AutoDetectParser();
+            ParseContext context = new ParseContext();
+            parser.parse(file.getInputStream(), handler, metadata, context);
+            String text = handler.toString();
+            if (text == null || text.isBlank()) {
+                throw new BusinessException("未能从文档中提取到文本内容，可能是扫描件或纯图片文档");
+            }
+            return text;
         } catch (IOException exception) {
             throw new BusinessException("文档读取失败: " + exception.getMessage());
+        } catch (TikaException | SAXException exception) {
+            throw new BusinessException("文档解析失败: " + exception.getMessage());
         }
     }
 }
